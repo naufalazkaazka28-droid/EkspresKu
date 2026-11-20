@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+.leaflet-container { z-index: 0; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+}

@@ -1,0 +1,252 @@
+// ============================================================
+// EkspresKu - Skema Database (Prisma + PostgreSQL)
+// Letakkan di: prisma/schema.prisma
+// ============================================================
+// Catatan versi:
+// - Skema ini memakai format klasik (prisma-client-js, url di datasource).
+// - Jika memakai Prisma 7 atau lebih baru, pindahkan url/directUrl ke
+//   prisma.config.ts dan sesuaikan blok generator sesuai dokumentasi Prisma.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // connection string yang di-pool (untuk aplikasi di Vercel)
+  directUrl = env("DIRECT_URL")   // koneksi langsung (untuk prisma migrate)
+}
+
+// ------------------------------------------------------------
+// ENUM
+// ------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  KURIR
+  PELANGGAN
+}
+
+enum StatusPaket {
+  DIPROSES
+  DALAM_PERJALANAN
+  SUDAH_DITERIMA
+  TERTUNDA
+}
+
+enum StatusBayar {
+  BELUM_BAYAR
+  LUNAS
+}
+
+enum JenisLokasi {
+  AGEN    // titik awal/akhir (agen atau cabang)
+  HUB     // pusat sortir
+  TRANSIT // lokasi transit
+}
+
+// ------------------------------------------------------------
+// PENGGUNA
+// ------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  password  String // hash bcrypt, JANGAN simpan teks asli
+  role      Role     @default(PELANGGAN)
+  noHp      String?
+  alamat    String?
+  aktif     Boolean  @default(true) // nonaktifkan akun, jangan hapus (menjaga riwayat)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kurir      Kurir? // terisi hanya jika role = KURIR
+  pakets     Paket[]     @relation("PaketPelanggan")
+  paketDibuat Paket[]    @relation("PaketDibuatOleh")
+  pelacakans Pelacakan[] // status yang pernah diubah oleh user ini
+
+  @@index([role])
+  @@map("users")
+}
+
+model Kurir {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  kendaraan    String // contoh: Motor, Mobil Box
+  platNomor    String  @unique
+  wilayahTugas String
+  aktif        Boolean @default(true)
+  // false = kurir mendaftar sendiri dan menunggu persetujuan admin
+  disetujui    Boolean @default(false)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  pengirimans Pengiriman[]
+
+  @@map("kurirs")
+}
+
+// ------------------------------------------------------------
+// MASTER: LAYANAN, TARIF, LOKASI
+// ------------------------------------------------------------
+
+model Layanan {
+  id             String  @id @default(cuid())
+  nama           String  @unique // Reguler, Express, Same Day
+  pengaliTarif   Decimal @db.Decimal(5, 2) // contoh: 1.00, 1.50, 2.50
+  estimasiHariMin Int // Reguler 3, Express 1, Same Day 0
+  estimasiHariMax Int // Reguler 5, Express 2, Same Day 0
+  jamCutoff      String? // "HH:mm" WIB; batas order Same Day (opsional)
+  aktif          Boolean @default(true)
+
+  pengirimans Pengiriman[]
+
+  @@map("layanans")
+}
+
+model Tarif {
+  id         String  @id @default(cuid())
+  zona       String  @unique // nama zona/kota tujuan
+  tarifPerKg Int // rupiah per kg
+  latitude   Float? // titik pusat zona (untuk pin tujuan di peta)
+  longitude  Float?
+  aktif      Boolean @default(true)
+
+  pengirimans Pengiriman[]
+
+  @@map("tarifs")
+}
+
+// Titik lokasi untuk peta Leaflet dan riwayat pelacakan
+model Lokasi {
+  id        String      @id @default(cuid())
+  nama      String // contoh: "Benowo DC", "Agen Bojonegoro"
+  kota      String
+  jenis     JenisLokasi @default(HUB)
+  latitude  Float
+  longitude Float
+  aktif     Boolean     @default(true)
+
+  pelacakans Pelacakan[]
+
+  @@map("lokasis")
+}
+
+// ------------------------------------------------------------
+// PAKET, PENGIRIMAN, PELACAKAN
+// ------------------------------------------------------------
+
+model Paket {
+  id     String @id @default(cuid())
+  noResi String @unique // format: EKS-YYYYMMDD-0001
+  trackingToken String @unique
+
+  // pelangganId boleh kosong: admin bisa input paket pelanggan walk-in
+  pelangganId  String?
+  dibuatOlehId String // siapa yang menginput (pelanggan atau admin)
+
+  namaPengirim String
+  telpPengirim String
+  alamatAsal   String
+  asalLat      Float?
+  asalLng      Float?
+
+  namaPenerima String
+  telpPenerima String
+  alamatTujuan String
+  tujuanLat    Float?
+  tujuanLng    Float?
+
+  beratKg      Decimal  @db.Decimal(8, 2) // berat asli
+  isiPaket     String
+  tanggalMasuk DateTime @default(now()) // disimpan UTC, tampilkan dalam WIB di aplikasi
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pelanggan  User?        @relation("PaketPelanggan", fields: [pelangganId], references: [id], onDelete: SetNull)
+  dibuatOleh User         @relation("PaketDibuatOleh", fields: [dibuatOlehId], references: [id], onDelete: Restrict)
+  pengiriman Pengiriman?
+  pelacakans Pelacakan[]
+
+  @@index([pelangganId])
+  @@index([namaPengirim])
+  @@index([namaPenerima])
+  @@index([tanggalMasuk])
+  @@map("pakets")
+}
+
+model Pengiriman {
+  id        String  @id @default(cuid())
+  paketId   String  @unique
+  layananId String
+  tarifId   String
+  kurirId   String? // kosong sampai admin menugaskan kurir
+
+  // --- Snapshot perhitungan ongkir (agar laporan tidak berubah saat tarif diedit) ---
+  tarifPerKgSaat  Int // tarif per kg ketika paket dibuat
+  pengaliSaat     Decimal @db.Decimal(5, 2) // pengali layanan ketika paket dibuat
+  beratDibulatkan Int // berat dibulatkan ke atas (kg)
+  ongkir          Int // = tarifPerKgSaat x beratDibulatkan x pengaliSaat
+  biayaTambahan   Int     @default(0)
+  keteranganBiaya String? // contoh: "Packing kayu"
+  totalOngkir     Int // = ongkir + biayaTambahan
+
+  estimasiTiba DateTime
+
+  statusBayar StatusBayar @default(BELUM_BAYAR)
+  dibayarPada DateTime?
+
+  // Salinan status terbaru dari tabel pelacakans, untuk query dan laporan cepat.
+  // WAJIB diperbarui bersamaan dengan insert pelacakan (dalam satu transaksi).
+  statusTerakhir StatusPaket @default(DIPROSES)
+
+  // Diisi saat SUDAH_DITERIMA
+  diterimaOleh String?
+  diterimaPada DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paket   Paket   @relation(fields: [paketId], references: [id], onDelete: Cascade)
+  layanan Layanan @relation(fields: [layananId], references: [id], onDelete: Restrict)
+  tarif   Tarif   @relation(fields: [tarifId], references: [id], onDelete: Restrict)
+  kurir   Kurir?  @relation(fields: [kurirId], references: [id], onDelete: SetNull)
+
+  @@index([kurirId])
+  @@index([statusTerakhir])
+  @@index([statusBayar])
+  @@index([layananId])
+  @@map("pengirimans")
+}
+
+model Pelacakan {
+  id          String      @id @default(cuid())
+  paketId     String
+  status      StatusPaket
+  lokasiId    String? // titik di peta (opsional)
+  keterangan  String? // wajib diisi di aplikasi saat TERTUNDA (alasan)
+  diubahOlehId String
+  waktu       DateTime    @default(now())
+
+  paket     Paket   @relation(fields: [paketId], references: [id], onDelete: Cascade)
+  lokasi    Lokasi? @relation(fields: [lokasiId], references: [id], onDelete: SetNull)
+  diubahOleh User   @relation(fields: [diubahOlehId], references: [id], onDelete: Restrict)
+
+  @@index([paketId, waktu])
+  @@map("pelacakans")
+}
+
+// ------------------------------------------------------------
+// PENDUKUNG
+// ------------------------------------------------------------
+
+// Penghitung nomor resi per hari (kunci = "YYYYMMDD" dalam WIB).
+// Naikkan nilainya lewat upsert + increment dalam transaksi,
+// agar dua pelanggan yang submit bersamaan tidak mendapat resi kembar.
+model ResiCounter {
+  tanggal String @id // contoh: "20261119"
+  terakhir Int   @default(0)
+
+  @@map("resi_counters")
+}
