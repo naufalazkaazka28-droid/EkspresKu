@@ -1,35 +1,131 @@
 # EkspresKu — Aplikasi Ekspedisi Paket
 
-Next.js (App Router) · TypeScript · Prisma · PostgreSQL · Auth.js · Tailwind CSS · Leaflet/OpenStreetMap · Vercel
+EkspresKu merupakan aplikasi berbasis web untuk membantu pengelolaan pengiriman paket, mulai dari pencatatan data pengiriman, perhitungan ongkos kirim, penugasan kurir, hingga pelacakan status paket.
 
-## Fitur
-- **Pelanggan**: daftar sendiri, buat pengiriman (hitung ongkir + estimasi → konfirmasi → resi otomatis, status *Diproses*), riwayat, lacak, profil.
-- **Kurir**: daftar sendiri (menunggu persetujuan admin), lihat tugas milik sendiri, perbarui status (Dalam Perjalanan / Sudah Diterima / Tertunda + alasan), profil.
-- **Admin**: dashboard, CRUD paket (termasuk pelanggan walk-in), penugasan kurir, status bayar, layanan & tarif, lokasi (hub), kurir (setujui/nonaktifkan/statistik), pengguna, laporan (filter + cetak).
-- **Publik**: `/lacak` — lacak dengan nomor resi dan kode pelacakan acak; detail lokasi dan catatan internal tidak ditampilkan.
+**Teknologi yang digunakan:**
+- Next.js (App Router)
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Auth.js
+- Tailwind CSS
+- Leaflet / OpenStreetMap
+- Vercel
 
-## Menjalankan di komputer
-1. `npm install`
-2. Buat database PostgreSQL (Neon / Supabase), salin `.env.example` → `.env`, isi `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `SEED_ADMIN_EMAIL`, dan `SEED_ADMIN_PASSWORD` dengan nilai sendiri. Kata sandi admin minimal 12 karakter.
-3. `npx prisma migrate dev --name init`
-4. `npm run db:seed` (admin dan data master; akun demo tidak dibuat)
-5. `npm run dev` → http://localhost:3000
+## Fitur Aplikasi
 
-Seed memakai email dan kata sandi admin dari environment; jalankan kembali seed dengan kredensial baru untuk merotasi kata sandi admin.
+### 1. Pelanggan
+- Melakukan pendaftaran akun.
+- Membuat pengiriman paket.
+- Melihat perhitungan ongkos kirim dan estimasi waktu.
+- Mendapatkan nomor resi otomatis.
+- Melihat riwayat pengiriman.
+- Melacak posisi dan status paket.
+- Mengelola profil pengguna.
+
+### 2. Kurir
+- Melakukan pendaftaran akun.
+- Menunggu persetujuan admin.
+- Melihat daftar tugas pengiriman.
+- Memperbarui status paket.
+- Mengelola profil kurir.
+
+### 3. Admin
+- Melihat dashboard pengiriman.
+- Mengelola data paket.
+- Menambahkan dan menugaskan kurir.
+- Mengelola status pembayaran.
+- Mengatur layanan dan tarif pengiriman.
+- Mengelola lokasi atau hub.
+- Mengelola akun pengguna.
+- Melihat dan mencetak laporan pengiriman.
+
+### 4. Pelacakan Publik
+- Melacak paket melalui nomor resi.
+- Menggunakan kode pelacakan untuk keamanan.
+- Melihat status dan informasi pengiriman.
+- Tidak menampilkan catatan internal kepada publik.
+
+## Cara Menjalankan Aplikasi
+
+1. Pastikan Node.js dan PostgreSQL sudah terpasang.
+2. Instal seluruh dependency:
+
+   `npm install`
+
+3. Salin file `.env.example` menjadi `.env`.
+4. Isi konfigurasi database dan autentikasi.
+5. Jalankan migrasi database:
+
+   `npx prisma migrate dev --name init`
+
+6. Isi data awal aplikasi:
+
+   `npm run db:seed`
+
+7. Jalankan aplikasi:
+
+   `npm run dev`
+
+8. Buka browser melalui:
+
+   `http://localhost:3000`
+
+## Konfigurasi Environment Variables
+
+Aplikasi membutuhkan beberapa variabel lingkungan berikut:
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `AUTH_SECRET`
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
+
+Gunakan nilai konfigurasi sendiri dan jangan membagikan file `.env` kepada publik.
 
 ## Deploy ke Vercel
-1. Push ke GitHub, import repo di Vercel.
-2. Isi Environment Variables: `DATABASE_URL` (pooled), `DIRECT_URL`, `AUTH_SECRET`, `SEED_ADMIN_EMAIL`, dan `SEED_ADMIN_PASSWORD`.
-3. Jalankan migrasi ke database produksi dari komputer lokal: `npx prisma migrate deploy` (dengan `.env` mengarah ke DB produksi), lalu `npm run db:seed` untuk membuat atau merotasi akun admin.
-4. Deploy. `npm run build` sudah menjalankan `prisma generate`.
 
-## Catatan desain
-- Semua waktu disimpan UTC; tampilan, nomor resi harian, dan filter laporan memakai **WIB**.
-- Pelacakan publik memerlukan nomor resi dan kode acak 256-bit. Kode ditampilkan di halaman detail paket pelanggan/admin; perlakukan seperti kata sandi dan bagikan hanya kepada pihak terkait.
-- Ongkir dihitung ulang **di server** saat konfirmasi; tarif/pengali disimpan sebagai snapshot di `Pengiriman`.
-- Perubahan status = insert `Pelacakan` + update `statusTerakhir` dalam satu transaksi. Alur: Diproses → Dalam Perjalanan → Sudah Diterima, cabang Tertunda.
-- Hak akses dicek di middleware, di layout/halaman, dan di setiap Server Action (kurir hanya paketnya sendiri, pelanggan hanya miliknya).
-- Pengguna nonaktif langsung ditolak pada permintaan berikutnya (dicek ke database, bukan hanya token).
+1. Upload project ke GitHub.
+2. Buka Vercel dan hubungkan akun GitHub.
+3. Import repository EkspresKu.
+4. Hubungkan database PostgreSQL.
+5. Tambahkan Environment Variables sesuai konfigurasi aplikasi.
+6. Jalankan migrasi database produksi menggunakan:
 
-## Belum termasuk
-Ekspor PDF/Excel (gunakan tombol Cetak), pembatasan percobaan login (rate limiting), reset kata sandi lewat email, unggah foto bukti terima, paginasi penuh (daftar dibatasi 100–200 baris).
+   `npx prisma migrate deploy`
+
+7. Jalankan seed untuk membuat atau memperbarui akun admin:
+
+   `npm run db:seed`
+
+8. Lakukan deployment melalui Vercel.
+
+Proses build aplikasi sudah mencakup `prisma generate`.
+
+## Catatan Sistem
+
+- Seluruh waktu disimpan menggunakan UTC dan ditampilkan dalam zona waktu WIB.
+- Nomor resi dibuat berdasarkan tanggal pengiriman.
+- Kode pelacakan publik menggunakan kode acak 256-bit.
+- Perhitungan ongkos kirim dilakukan kembali di server saat konfirmasi.
+- Riwayat perubahan status paket disimpan dalam database.
+- Perubahan status dan pembaruan status terakhir dilakukan dalam satu transaksi.
+- Hak akses dibedakan berdasarkan peran admin, kurir, dan pelanggan.
+- Pengguna nonaktif tidak dapat mengakses sistem.
+
+## Batasan Pengembangan
+
+Beberapa fitur yang belum tersedia:
+- Ekspor laporan PDF dan Excel secara langsung.
+- Pembatasan percobaan login (rate limiting).
+- Reset kata sandi melalui email.
+- Unggah foto bukti penerimaan paket.
+- Paginasi penuh pada seluruh daftar data.
+
+## Developer
+
+**Project:** EkspresKu  
+**Kategori:** Aplikasi Ekspedisi Paket  
+**Platform:** Web Application  
+**Framework:** Next.js
+
