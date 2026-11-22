@@ -6,6 +6,7 @@ import {
   Marker,
   NavigationControl,
   Popup,
+  setWorkerUrl,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -21,6 +22,7 @@ export default function TrackingMapInner({ visited, tujuan }: { visited: MapPoin
     const all = tujuan ? [...visited, tujuan] : visited;
     if (!all.length) return;
 
+    setWorkerUrl(new URL("../../node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).href);
     const map: MapLibreMap = new MapLibreMap({
       container: container.current,
       style: "https://tiles.openfreemap.org/styles/bright",
