@@ -9,7 +9,7 @@ EkspresKu merupakan aplikasi berbasis web untuk membantu pengelolaan pengiriman 
 - PostgreSQL
 - Auth.js
 - Tailwind CSS
-- Leaflet / OpenStreetMap
+- MapLibre GL / OpenFreeMap
 - Vercel
 
 ## Fitur Aplikasi
@@ -45,6 +45,7 @@ EkspresKu merupakan aplikasi berbasis web untuk membantu pengelolaan pengiriman 
 - Menggunakan kode pelacakan untuk keamanan.
 - Melihat status dan informasi pengiriman.
 - Tidak menampilkan catatan internal kepada publik.
+- Peta memakai style Liberty dari layanan publik OpenFreeMap tanpa API key; atribusi OpenFreeMap, OpenMapTiles, dan OpenStreetMap contributors ditampilkan pada peta.
 
 ## Cara Menjalankan Aplikasi
 
