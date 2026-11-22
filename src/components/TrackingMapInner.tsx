@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import {
-  AttributionControl,
   Map as MapLibreMap,
   Marker,
   NavigationControl,
@@ -24,25 +23,14 @@ export default function TrackingMapInner({ visited, tujuan }: { visited: MapPoin
 
     const map: MapLibreMap = new MapLibreMap({
       container: container.current,
-      style: "https://tiles.openfreemap.org/styles/liberty",
+      style: "https://tiles.openfreemap.org/styles/bright",
       center: [all[0].lng, all[0].lat],
       zoom: 9,
-      attributionControl: false,
+      attributionControl: { compact: true },
     });
     const markers: Marker[] = [];
 
     map.addControl(new NavigationControl({ showCompass: false }), "top-left");
-    map.addControl(
-      new AttributionControl({
-        compact: true,
-        customAttribution: [
-          '<a href="https://openfreemap.org/" target="_blank" rel="noreferrer">OpenFreeMap</a>',
-          '<a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a>',
-          '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>',
-        ],
-      }),
-      "bottom-right",
-    );
     map.scrollZoom.disable();
     if (window.matchMedia("(pointer: coarse)").matches) map.dragPan.disable();
 
@@ -54,7 +42,7 @@ export default function TrackingMapInner({ visited, tujuan }: { visited: MapPoin
           [Math.min(...lngs), Math.min(...lats)],
           [Math.max(...lngs), Math.max(...lats)],
         ],
-        { padding: 32, maxZoom: 9 },
+        { padding: 32, maxZoom: 11 },
       );
     }
 

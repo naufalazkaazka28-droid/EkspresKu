@@ -45,7 +45,7 @@ EkspresKu merupakan aplikasi berbasis web untuk membantu pengelolaan pengiriman 
 - Menggunakan kode pelacakan untuk keamanan.
 - Melihat status dan informasi pengiriman.
 - Tidak menampilkan catatan internal kepada publik.
-- Peta memakai style Liberty dari layanan publik OpenFreeMap tanpa API key; atribusi OpenFreeMap, OpenMapTiles, dan OpenStreetMap contributors ditampilkan pada peta.
+- Peta memakai style Bright dari layanan publik OpenFreeMap tanpa API key; atribusi bawaan MapLibre menampilkan OpenFreeMap, OpenMapTiles, dan OpenStreetMap contributors.
 
 ## Cara Menjalankan Aplikasi
 
