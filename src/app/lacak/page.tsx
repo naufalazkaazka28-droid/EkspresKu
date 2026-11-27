@@ -4,10 +4,13 @@ import { btnCls, inputCls } from "@/components/ui";
 import { maskNama } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { paketInclude, toPanel } from "@/lib/queries";
+import AppShell from "@/components/AppShell";
+import { getActiveUser } from "@/lib/session";
 
 export const metadata = { title: "Lacak Paket — EkspresKu", referrer: "no-referrer" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ resi?: string; kode?: string }> }) {
+  const user = await getActiveUser();
   const { resi, kode } = await searchParams;
   const q = resi?.trim().toUpperCase();
   const token = kode?.trim();
@@ -15,11 +18,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
     ? await prisma.paket.findFirst({ where: { noResi: q, trackingToken: token }, include: paketInclude })
     : null;
 
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <Link href="/" className="text-xl font-bold text-blue-700">
-        Ekspres<span className="text-slate-900">Ku</span>
-      </Link>
+  const content = (
+    <div className={`mx-auto max-w-3xl ${user ? "" : "px-4 py-8"}`}>
+      {!user && (
+        <Link href="/" className="text-xl font-bold text-blue-700">
+          Ekspres<span className="text-slate-900">Ku</span>
+        </Link>
+      )}
       <h1 className="mb-4 mt-4 text-2xl font-bold text-slate-900">Lacak paket</h1>
 
       <form className="mb-6 flex flex-col gap-2">
@@ -46,4 +51,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
       )}
     </div>
   );
+
+  return user ? <AppShell user={{ nama: user.nama, role: user.role }}>{content}</AppShell> : content;
 }
